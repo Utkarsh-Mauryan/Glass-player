@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create complete Flutter skeleton
+        run: |
+          # Backup your custom files
+          mkdir -p /tmp/glass_backup
+          cp pubspec.yaml /tmp/glass_backup/
+          cp -r lib /tmp/glass_backup/
+
+          # Scaffold the missing Android gradle and manifest files
+          flutter create . --org com.glassplayer.app --platforms android --project-name glass_video_player
+
+          # Restore your custom code
+          cp /tmp/glass_backup/pubspec.yaml .
+          cp -r /tmp/glass_backup/lib/* lib/
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          
